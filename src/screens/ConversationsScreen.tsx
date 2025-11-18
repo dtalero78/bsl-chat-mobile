@@ -52,9 +52,11 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
     try {
       setLoading(true);
       const data = await chatApi.getConversations();
+      console.log('✅ Conversaciones cargadas:', data.length);
       setConversations(data);
-    } catch (error) {
-      console.error('Error loading conversations:', error);
+    } catch (error: any) {
+      console.error('❌ Error loading conversations:', error.message);
+      console.error('Full error:', error);
     } finally {
       setLoading(false);
     }

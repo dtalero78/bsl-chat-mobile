@@ -1,3 +1,13 @@
+export interface ConversationData {
+  nombre: string;
+  numero: string;
+  last_message: string | null;
+  last_message_time: string | null;
+  profile_picture: string | null;
+  message_count: number;
+  source: 'twilio' | 'whapi';
+}
+
 export interface Conversation {
   id: string;
   name: string;
@@ -10,5 +20,5 @@ export interface Conversation {
 }
 
 export interface ConversationsResponse {
-  conversaciones: Conversation[];
+  conversaciones: { [key: string]: ConversationData };
 }

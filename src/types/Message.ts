@@ -13,6 +13,7 @@ export interface MessagesResponse {
 }
 
 export interface SendMessageRequest {
-  conversation_id: string;
-  mensaje: string;
+  to: string;
+  message: string;
+  source?: 'auto' | 'twilio' | 'whapi';
 }
