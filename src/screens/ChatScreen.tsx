@@ -31,6 +31,9 @@ export default function ChatScreen({ conversation, onBack }: ChatScreenProps) {
     loadMessages();
     joinConversation();
 
+    // Mark conversation as read when opening
+    chatApi.markAsRead(conversation.id);
+
     return () => {
       websocketService.leaveConversation(conversation.id);
     };

@@ -121,6 +121,18 @@ export const chatApi = {
       throw error;
     }
   },
+
+  // Mark conversation as read
+  markAsRead: async (conversationId: string): Promise<void> => {
+    try {
+      console.log('📖 Marking conversation as read:', conversationId);
+      await api.post(`/twilio-chat/api/marcar-leido/${conversationId}`);
+      console.log('✅ Conversation marked as read');
+    } catch (error) {
+      console.error('❌ Error marking conversation as read:', error);
+      // Don't throw - this is a non-critical operation
+    }
+  },
 };
 
 export default api;

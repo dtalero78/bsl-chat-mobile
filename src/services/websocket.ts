@@ -12,6 +12,7 @@ class WebSocketService {
   public onNewMessage: ((message: Message) => void) | null = null;
   public onMessageStatusUpdate: ((messageId: string, status: string) => void) | null = null;
   public onConversationUpdate: ((conversation: Conversation) => void) | null = null;
+  public onConversationRead: ((conversationId: string) => void) | null = null;
   public onConnectionChange: ((connected: boolean) => void) | null = null;
 
   connect() {
@@ -79,6 +80,11 @@ class WebSocketService {
     this.socket.on('conversation_updated', (data: Conversation) => {
       console.log('🔄 Conversation updated:', data.id);
       this.onConversationUpdate?.(data);
+    });
+
+    this.socket.on('conversation_read', (data: { numero: string }) => {
+      console.log('📖 Conversation marked as read:', data.numero);
+      this.onConversationRead?.(data.numero);
     });
   }
 

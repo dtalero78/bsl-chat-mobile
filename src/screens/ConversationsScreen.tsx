@@ -49,6 +49,15 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
       );
     };
 
+    websocketService.onConversationRead = (conversationId) => {
+      console.log('📖 Resetting unread count for:', conversationId);
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
+        )
+      );
+    };
+
     // Handle new messages to update conversation list
     websocketService.onNewMessage = (newMessage) => {
       console.log('📨 New message received in conversations screen:', newMessage.conversation_id);
@@ -155,8 +164,8 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
   };
 
   const renderConversation = ({ item }: { item: Conversation }) => {
-    // Determine avatar color based on source: Twilio = green, Whapi = blue
-    const avatarColor = item.source === 'twilio' ? styles.avatarTwilio : styles.avatarWhapi;
+    // Determine avatar color based on source: Twilio or both = green, Whapi = blue
+    const avatarColor = (item.source === 'twilio' || item.source === 'both') ? styles.avatarTwilio : styles.avatarWhapi;
 
     return (
       <TouchableOpacity
