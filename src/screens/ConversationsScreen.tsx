@@ -8,9 +8,12 @@ import {
   RefreshControl,
   ActivityIndicator,
   Image,
+  AppState,
+  TextInput,
 } from 'react-native';
 import { chatApi } from '../services/api';
 import { websocketService } from '../services/websocket';
+import { notificationService } from '../services/notifications';
 import { Conversation } from '../types/Conversation';
 
 interface ConversationsScreenProps {
@@ -19,6 +22,8 @@ interface ConversationsScreenProps {
 
 export default function ConversationsScreen({ onSelectConversation }: ConversationsScreenProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -27,9 +32,8 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
     loadConversations();
     connectWebSocket();
 
-    return () => {
-      websocketService.disconnect();
-    };
+    // Don't disconnect on unmount - keep WebSocket alive
+    // to receive real-time updates even when not viewing conversations
   }, []);
 
   const connectWebSocket = () => {
@@ -45,6 +49,50 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
       );
     };
 
+    // Handle new messages to update conversation list
+    websocketService.onNewMessage = (newMessage) => {
+      console.log('📨 New message received in conversations screen:', newMessage.conversation_id);
+
+      // Show local notification if app is in background
+      const appState = AppState.currentState;
+      if (appState === 'background' || appState === 'inactive') {
+        // Find conversation name for better notification
+        const conversation = conversations.find(c => c.id === newMessage.conversation_id);
+        const title = conversation?.name || 'Nuevo mensaje';
+
+        notificationService.scheduleLocalNotification(
+          title,
+          newMessage.body || '(media)',
+          { conversationId: newMessage.conversation_id }
+        );
+      }
+
+      // ✅ Actualizar SOLO la conversación modificada (tipo WhatsApp - no recarga todo)
+      setConversations((prevConversations) => {
+        const updatedConversations = prevConversations.map((conv) => {
+          if (conv.id === newMessage.conversation_id) {
+            return {
+              ...conv,
+              last_message: newMessage.body || '(media)',
+              last_message_time: newMessage.timestamp,
+              // Solo incrementar unread_count si es mensaje ENTRANTE
+              unread_count: newMessage.direction === 'inbound'
+                ? conv.unread_count + 1
+                : conv.unread_count,
+            };
+          }
+          return conv;
+        });
+
+        // Re-ordenar por timestamp más reciente primero
+        return updatedConversations.sort((a, b) => {
+          if (!a.last_message_time) return 1;
+          if (!b.last_message_time) return -1;
+          return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
+        });
+      });
+    };
+
     websocketService.connect();
   };
 
@@ -53,7 +101,9 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
       setLoading(true);
       const data = await chatApi.getConversations();
       console.log('✅ Conversaciones cargadas:', data.length);
+      console.log('📋 Primera conversación:', data[0]?.name || 'ninguna');
       setConversations(data);
+      setFilteredConversations(data);
     } catch (error: any) {
       console.error('❌ Error loading conversations:', error.message);
       console.error('Full error:', error);
@@ -61,6 +111,19 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
       setLoading(false);
     }
   };
+
+  // Filter conversations based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredConversations(conversations);
+    } else {
+      const filtered = conversations.filter((conv) =>
+        conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        conv.phone.includes(searchQuery)
+      );
+      setFilteredConversations(filtered);
+    }
+  }, [searchQuery, conversations]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -91,24 +154,28 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
     }
   };
 
-  const renderConversation = ({ item }: { item: Conversation }) => (
-    <TouchableOpacity
-      style={styles.conversationItem}
-      onPress={() => onSelectConversation(item)}
-    >
-      {item.profile_pic_url ? (
-        <Image
-          source={{ uri: item.profile_pic_url }}
-          style={styles.avatar}
-          defaultSource={require('../../assets/icon.png')}
-        />
-      ) : (
-        <View style={[styles.avatar, styles.avatarPlaceholder]}>
-          <Text style={styles.avatarText}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-      )}
+  const renderConversation = ({ item }: { item: Conversation }) => {
+    // Determine avatar color based on source: Twilio = green, Whapi = blue
+    const avatarColor = item.source === 'twilio' ? styles.avatarTwilio : styles.avatarWhapi;
+
+    return (
+      <TouchableOpacity
+        style={styles.conversationItem}
+        onPress={() => onSelectConversation(item)}
+      >
+        {item.profile_pic_url ? (
+          <Image
+            source={{ uri: item.profile_pic_url }}
+            style={styles.avatar}
+            defaultSource={require('../../assets/icon.png')}
+          />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder, avatarColor]}>
+            <Text style={styles.avatarText}>
+              {item.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
 
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
@@ -131,8 +198,9 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
           )}
         </View>
       </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -150,8 +218,20 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
         <View style={[styles.connectionIndicator, isConnected && styles.connected]} />
       </View>
 
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar conversaciones..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          clearButtonMode="while-editing"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
+
       <FlatList
-        data={conversations}
+        data={filteredConversations}
         renderItem={renderConversation}
         keyExtractor={(item) => item.id}
         refreshControl={
@@ -204,6 +284,22 @@ const styles = StyleSheet.create({
   connected: {
     backgroundColor: '#4CD964',
   },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchInput: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
   conversationItem: {
     flexDirection: 'row',
     padding: 16,
@@ -216,9 +312,14 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatarPlaceholder: {
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarTwilio: {
+    backgroundColor: '#4CD964', // Green for Twilio
+  },
+  avatarWhapi: {
+    backgroundColor: '#007AFF', // Blue for Whapi
   },
   avatarText: {
     color: '#fff',

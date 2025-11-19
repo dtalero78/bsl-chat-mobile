@@ -22,7 +22,7 @@ class WebSocketService {
 
     console.log('🔵 Connecting to WebSocket...');
 
-    this.socket = io(SOCKET_URL, {
+    this.socket = io(`${SOCKET_URL}/twilio-chat`, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -53,18 +53,30 @@ class WebSocketService {
       console.log('❌ WebSocket connection error:', error.message);
     });
 
-    // Chat events
-    this.socket.on('nuevo_mensaje', (data: Message) => {
-      console.log('📨 New message received:', data.id);
-      this.onNewMessage?.(data);
+    // Chat events - backend sends 'new_message' (not 'nuevo_mensaje')
+    this.socket.on('new_message', (data: any) => {
+      console.log('📨 New message received from backend:', data);
+
+      // Transform backend format to our Message format
+      const message: Message = {
+        id: data.message_sid || data.message_id || `temp-${Date.now()}`,
+        conversation_id: data.numero, // numero is the clean phone number
+        // ✅ Usar direction del backend si está disponible (después de CAMBIO 1)
+        direction: data.direction || (data.from.includes('+573153369631') ? 'outbound' : 'inbound'),
+        body: data.body,
+        timestamp: data.timestamp,
+        status: data.status || 'delivered',  // ← Usar status del backend
+      };
+
+      this.onNewMessage?.(message);
     });
 
-    this.socket.on('mensaje_actualizado', (data: { message_id: string; status: string }) => {
+    this.socket.on('message_status_update', (data: { message_id: string; status: string }) => {
       console.log('🔄 Message status updated:', data.message_id, data.status);
       this.onMessageStatusUpdate?.(data.message_id, data.status);
     });
 
-    this.socket.on('conversacion_actualizada', (data: Conversation) => {
+    this.socket.on('conversation_updated', (data: Conversation) => {
       console.log('🔄 Conversation updated:', data.id);
       this.onConversationUpdate?.(data);
     });

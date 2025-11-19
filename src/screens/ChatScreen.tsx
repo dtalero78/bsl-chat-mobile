@@ -41,7 +41,30 @@ export default function ChatScreen({ conversation, onBack }: ChatScreenProps) {
 
     websocketService.onNewMessage = (newMessage) => {
       if (newMessage.conversation_id === conversation.id) {
-        setMessages((prev) => [...prev, newMessage]);
+        setMessages((prev) => {
+          // ✅ Si el mensaje es saliente, buscar mensaje temporal para reemplazar
+          if (newMessage.direction === 'outbound') {
+            // Buscar mensaje temporal con mismo body y timestamp similar (últimos 5 segundos)
+            const tempMsgIndex = prev.findIndex(msg =>
+              msg.direction === 'outbound' &&
+              msg.status === 'pending' &&
+              msg.body === newMessage.body &&
+              Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000
+            );
+
+            if (tempMsgIndex !== -1) {
+              // Reemplazar mensaje temporal con mensaje real
+              const updated = [...prev];
+              updated[tempMsgIndex] = newMessage;
+              console.log(`✅ Mensaje temporal reemplazado: ${prev[tempMsgIndex].id} → ${newMessage.id}`);
+              return updated;
+            }
+          }
+
+          // Si no es saliente o no se encontró mensaje temporal, agregar normalmente
+          return [...prev, newMessage];
+        });
+
         setTimeout(() => scrollToBottom(), 100);
       }
     };

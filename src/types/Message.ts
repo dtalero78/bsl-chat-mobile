@@ -1,3 +1,27 @@
+// Backend message format (Twilio)
+export interface TwilioMessage {
+  sid: string;
+  body: string | null;
+  direction: 'inbound' | 'outbound';
+  date_sent: string;
+  from: string;
+  to: string;
+  status: string;
+  media_count: string;
+  source: 'twilio';
+}
+
+// Backend message format (Whapi)
+export interface WhapiMessage {
+  id: string;
+  body: string | null;
+  from_me: boolean;
+  timestamp: number;
+  status?: string;
+  source: 'whapi';
+}
+
+// Frontend unified message format
 export interface Message {
   id: string;
   conversation_id: string;
@@ -9,7 +33,13 @@ export interface Message {
 }
 
 export interface MessagesResponse {
-  mensajes: Message[];
+  success: boolean;
+  count: number;
+  total: number;
+  source: 'twilio' | 'whapi' | 'twilio_and_whapi';
+  numero: string;
+  twilio_messages?: TwilioMessage[];
+  whapi_messages?: WhapiMessage[];
 }
 
 export interface SendMessageRequest {
