@@ -28,6 +28,8 @@ const QUICK_REPLIES = [
   { key: '/3', text: '...dame un momento' },
   { key: '/a', text: '...transfiriendo con asesor' },
   { key: '/c', text: 'Bancolombia\nCuenta de Ahorros 442 9119 2456\nCédula: 79 981 585\n\nDaviplata: 3014400818\nNequi: 3008021701' },
+  { key: '/d', text: 'Descárgalo desde este link: www.bsl.com.co/descargar' },
+  { key: '/dp', text: 'Descárgalo desde\n\nhttps://www.bsl.com.co/descargar-personas' },
   { key: '/l', text: 'La persona que va a hacer el examen debe diligenciar el siguiente link:\n\nwww.bsl.com.co/nuevaorden-1' },
   { key: '/li', text: 'Listo. la doctora llama por whatsapp video' },
 ];
