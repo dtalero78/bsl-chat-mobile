@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bsl.chatmobile",
-      "buildNumber": "1",
+      "buildNumber": "5",
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
