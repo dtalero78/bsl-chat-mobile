@@ -20,11 +20,25 @@ interface ChatScreenProps {
   onBack: () => void;
 }
 
+// Respuestas rápidas predefinidas
+const QUICK_REPLIES = [
+  { key: '/0', text: 'Listo. El doctor revisa las pruebas y te llama o te lo aprueba inmediatamente' },
+  { key: '/1', text: '¡Hola 👋!' },
+  { key: '/2', text: 'Agendar tu teleconsulta es muy fácil:\n \n📅 Diligencia tus datos y escoge la hora que te convenga\n \n👂👀 Realiza las pruebas de audición y visión necesarias desde tu celular o computador.\n \n📱 El médico se comunicará contigo a través de WhatsApp video.\n \n💵 Paga después de la consulta usando Bancolombia, Nequi, o Daviplata (46.000).\n \n¡Listo! Descarga inmediatamente tu certificado\n\nPara comenzar:\n\nhttps://www.bsl.com.co/nuevaorden-1' },
+  { key: '/3', text: '...dame un momento' },
+  { key: '/a', text: '...transfiriendo con asesor' },
+  { key: '/c', text: 'Bancolombia\nCuenta de Ahorros 442 9119 2456\nCédula: 79 981 585\n\nDaviplata: 3014400818\nNequi: 3008021701' },
+  { key: '/l', text: 'La persona que va a hacer el examen debe diligenciar el siguiente link:\n\nwww.bsl.com.co/nuevaorden-1' },
+  { key: '/li', text: 'Listo. la doctora llama por whatsapp video' },
+];
+
 export default function ChatScreen({ conversation, onBack }: ChatScreenProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [filteredReplies, setFilteredReplies] = useState(QUICK_REPLIES);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -94,11 +108,32 @@ export default function ChatScreen({ conversation, onBack }: ChatScreenProps) {
     }
   };
 
+  const handleInputChange = (text: string) => {
+    setInputText(text);
+
+    // Detectar si el usuario escribe "/"
+    if (text.startsWith('/')) {
+      const filtered = QUICK_REPLIES.filter(reply =>
+        reply.key.toLowerCase().startsWith(text.toLowerCase())
+      );
+      setFilteredReplies(filtered);
+      setShowQuickReplies(filtered.length > 0);
+    } else {
+      setShowQuickReplies(false);
+    }
+  };
+
+  const selectQuickReply = (reply: typeof QUICK_REPLIES[0]) => {
+    setInputText(reply.text);
+    setShowQuickReplies(false);
+  };
+
   const sendMessage = async () => {
     if (!inputText.trim() || sending) return;
 
     const messageText = inputText.trim();
     setInputText('');
+    setShowQuickReplies(false);
     setSending(true);
 
     // Optimistic message
@@ -240,11 +275,32 @@ export default function ChatScreen({ conversation, onBack }: ChatScreenProps) {
         onContentSizeChange={() => scrollToBottom()}
       />
 
+      {showQuickReplies && (
+        <View style={styles.quickRepliesContainer}>
+          <FlatList
+            data={filteredReplies}
+            keyExtractor={(item) => item.key}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.quickReplyItem}
+                onPress={() => selectQuickReply(item)}
+              >
+                <Text style={styles.quickReplyKey}>{item.key}</Text>
+                <Text style={styles.quickReplyText} numberOfLines={1}>
+                  {item.text}
+                </Text>
+              </TouchableOpacity>
+            )}
+            style={styles.quickRepliesList}
+          />
+        </View>
+      )}
+
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           value={inputText}
-          onChangeText={setInputText}
+          onChangeText={handleInputChange}
           placeholder="Escribe un mensaje..."
           multiline
           maxLength={1000}
@@ -389,5 +445,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  quickRepliesContainer: {
+    maxHeight: 200,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+    backgroundColor: '#F9F9F9',
+  },
+  quickRepliesList: {
+    flexGrow: 0,
+  },
+  quickReplyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  quickReplyKey: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginRight: 12,
+    minWidth: 40,
+  },
+  quickReplyText: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
   },
 });
