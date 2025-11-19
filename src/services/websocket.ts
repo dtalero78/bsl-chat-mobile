@@ -28,7 +28,13 @@ class WebSocketService {
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
       timeout: 20000,
+      autoConnect: true,
+      forceNew: false,
+      // Keep-alive configuration
+      pingInterval: 25000,  // Match server config
+      pingTimeout: 60000,   // Match server config
     });
 
     this.setupEventHandlers();
@@ -44,10 +50,35 @@ class WebSocketService {
       this.onConnectionChange?.(true);
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('🔴 WebSocket disconnected');
+    this.socket.on('disconnect', (reason) => {
+      console.log('🔴 WebSocket disconnected:', reason);
       this.connected = false;
       this.onConnectionChange?.(false);
+
+      // Reconectar automáticamente si la desconexión fue inesperada
+      if (reason === 'io server disconnect') {
+        // El servidor forzó la desconexión, reconectar
+        console.log('🔄 Reconectando por desconexión del servidor...');
+        this.socket?.connect();
+      }
+    });
+
+    this.socket.on('reconnect', (attemptNumber) => {
+      console.log(`🔄 Reconectado después de ${attemptNumber} intentos`);
+      this.connected = true;
+      this.onConnectionChange?.(true);
+    });
+
+    this.socket.on('reconnect_attempt', (attemptNumber) => {
+      console.log(`🔄 Intento de reconexión #${attemptNumber}`);
+    });
+
+    this.socket.on('reconnect_error', (error) => {
+      console.log('❌ Error en reconexión:', error.message);
+    });
+
+    this.socket.on('reconnect_failed', () => {
+      console.log('❌ Falló la reconexión después de todos los intentos');
     });
 
     this.socket.on('connect_error', (error) => {
