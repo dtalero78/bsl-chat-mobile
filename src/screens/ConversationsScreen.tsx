@@ -7,7 +7,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Image,
   AppState,
   TextInput,
 } from 'react-native';
@@ -45,12 +44,11 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
       setConversations((prev) =>
         prev.map((conv) => {
           if (conv.id === updatedConversation.id) {
-            // Solo actualizar campos que vienen definidos
-            // NO sobrescribir last_message si no viene (puede ser un update solo de foto/nombre)
+            // Solo actualizar nombre y last_message si vienen definidos
+            // Fotos de perfil deshabilitadas (no funcionan correctamente)
             return {
               ...conv,
               ...(updatedConversation.name && { name: updatedConversation.name }),
-              ...(updatedConversation.profile_pic_url !== undefined && { profile_pic_url: updatedConversation.profile_pic_url }),
               ...(updatedConversation.last_message && { last_message: updatedConversation.last_message }),
               ...(updatedConversation.last_message_time && { last_message_time: updatedConversation.last_message_time }),
             };
@@ -207,19 +205,11 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
         style={styles.conversationItem}
         onPress={() => onSelectConversation(item)}
       >
-        {item.profile_pic_url ? (
-          <Image
-            source={{ uri: item.profile_pic_url }}
-            style={styles.avatar}
-            defaultSource={require('../../assets/icon.png')}
-          />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder, avatarColor]}>
-            <Text style={styles.avatarText}>
-              {item.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <View style={[styles.avatar, styles.avatarPlaceholder, avatarColor]}>
+          <Text style={styles.avatarText}>
+            {item.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
 
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
