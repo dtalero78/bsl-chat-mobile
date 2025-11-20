@@ -5,7 +5,7 @@ export interface ConversationData {
   last_message_time: string | null;
   profile_picture: string | null;
   message_count: number;
-  source: 'twilio' | 'whapi';
+  source: 'twilio' | 'whapi' | 'both';
 }
 
 export interface Conversation {
@@ -16,7 +16,7 @@ export interface Conversation {
   last_message_time: string | null;
   profile_pic_url: string | null;
   unread_count: number;
-  source: 'twilio' | 'whapi';
+  source: 'twilio' | 'whapi' | 'both';
 }
 
 export interface ConversationsResponse {

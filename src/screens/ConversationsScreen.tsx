@@ -78,20 +78,44 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
 
       // ✅ Actualizar SOLO la conversación modificada (tipo WhatsApp - no recarga todo)
       setConversations((prevConversations) => {
-        const updatedConversations = prevConversations.map((conv) => {
-          if (conv.id === newMessage.conversation_id) {
-            return {
-              ...conv,
-              last_message: newMessage.body || '(media)',
-              last_message_time: newMessage.timestamp,
-              // Solo incrementar unread_count si es mensaje ENTRANTE
-              unread_count: newMessage.direction === 'inbound'
-                ? conv.unread_count + 1
-                : conv.unread_count,
-            };
-          }
-          return conv;
-        });
+        // Verificar si la conversación ya existe
+        const existingConvIndex = prevConversations.findIndex(
+          (conv) => conv.id === newMessage.conversation_id
+        );
+
+        let updatedConversations: Conversation[];
+
+        if (existingConvIndex !== -1) {
+          // Conversación existe - actualizar
+          updatedConversations = prevConversations.map((conv) => {
+            if (conv.id === newMessage.conversation_id) {
+              return {
+                ...conv,
+                last_message: newMessage.body || '(media)',
+                last_message_time: newMessage.timestamp,
+                // Solo incrementar unread_count si es mensaje ENTRANTE
+                unread_count: newMessage.direction === 'inbound'
+                  ? conv.unread_count + 1
+                  : conv.unread_count,
+              };
+            }
+            return conv;
+          });
+        } else {
+          // Conversación nueva - agregar a la lista
+          console.log('➕ Adding new conversation:', newMessage.conversation_id);
+          const newConversation: Conversation = {
+            id: newMessage.conversation_id,
+            name: `Usuario ${newMessage.conversation_id.slice(-4)}`,
+            phone: newMessage.conversation_id,
+            last_message: newMessage.body || '(media)',
+            last_message_time: newMessage.timestamp,
+            profile_pic_url: null,
+            unread_count: newMessage.direction === 'inbound' ? 1 : 0,
+            source: 'whapi',
+          };
+          updatedConversations = [...prevConversations, newConversation];
+        }
 
         // Re-ordenar por timestamp más reciente primero
         return updatedConversations.sort((a, b) => {
