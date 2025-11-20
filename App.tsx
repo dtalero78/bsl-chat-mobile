@@ -1,18 +1,61 @@
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, AppState } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
+import NetInfo from '@react-native-community/netinfo';
 import ConversationsScreen from './src/screens/ConversationsScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import { Conversation } from './src/types/Conversation';
 import { notificationService } from './src/services/notifications';
+import { websocketService } from './src/services/websocket';
 
 export default function App() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const notificationListener = useRef<any>();
   const responseListener = useRef<any>();
+  const appState = useRef(AppState.currentState);
 
   console.log('🎯 App rendering, selected:', selectedConversation?.name || 'none');
+
+  // Monitor AppState changes for WebSocket reconnection
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to the foreground - ensure WebSocket is connected
+        console.log('🔄 App returned to foreground - checking WebSocket connection');
+        if (!websocketService.isConnected()) {
+          console.log('🔌 WebSocket disconnected - reconnecting...');
+          websocketService.connect();
+        } else {
+          console.log('✅ WebSocket already connected');
+        }
+      } else if (nextAppState.match(/inactive|background/)) {
+        console.log('📴 App going to background');
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // Monitor network changes for WebSocket reconnection
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      console.log('📡 Network state changed:', state.type, 'Connected:', state.isConnected);
+
+      // If network is connected and WebSocket is not, reconnect
+      if (state.isConnected && !websocketService.isConnected()) {
+        console.log('🔌 Network available but WebSocket disconnected - reconnecting...');
+        websocketService.connect();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     // Register for push notifications

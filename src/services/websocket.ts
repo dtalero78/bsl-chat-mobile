@@ -29,13 +29,10 @@ class WebSocketService {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 2000,
       reconnectionDelayMax: 10000,
-      timeout: 20000,
+      timeout: 30000,  // Increased from 20s to 30s to match pingTimeout
       autoConnect: true,
       forceNew: false,
-      // Keep-alive configuration
-      pingInterval: 25000,  // Match server config
-      pingTimeout: 60000,   // Match server config
-    });
+    } as any); // Note: pingInterval/pingTimeout are server-side settings, configured in backend
 
     this.setupEventHandlers();
   }
