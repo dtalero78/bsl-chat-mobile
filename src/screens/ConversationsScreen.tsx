@@ -43,9 +43,20 @@ export default function ConversationsScreen({ onSelectConversation }: Conversati
 
     websocketService.onConversationUpdate = (updatedConversation) => {
       setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === updatedConversation.id ? updatedConversation : conv
-        )
+        prev.map((conv) => {
+          if (conv.id === updatedConversation.id) {
+            // Solo actualizar campos que vienen definidos
+            // NO sobrescribir last_message si no viene (puede ser un update solo de foto/nombre)
+            return {
+              ...conv,
+              ...(updatedConversation.name && { name: updatedConversation.name }),
+              ...(updatedConversation.profile_pic_url !== undefined && { profile_pic_url: updatedConversation.profile_pic_url }),
+              ...(updatedConversation.last_message && { last_message: updatedConversation.last_message }),
+              ...(updatedConversation.last_message_time && { last_message_time: updatedConversation.last_message_time }),
+            };
+          }
+          return conv;
+        })
       );
     };
 
