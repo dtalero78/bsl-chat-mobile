@@ -103,13 +103,38 @@ class WebSocketService {
       this.onNewMessage?.(message);
     });
 
-    this.socket.on('message_status_update', (data: { message_id: string; status: string }) => {
+    // ✅ NUEVO: Evento de cambio de estado de mensaje (read receipts)
+    this.socket.on('message_status', (data: { message_id: string; status: string; numero: string }) => {
       console.log('🔄 Message status updated:', data.message_id, data.status);
       this.onMessageStatusUpdate?.(data.message_id, data.status);
     });
 
+    // Legacy event (mantener por compatibilidad)
+    this.socket.on('message_status_update', (data: { message_id: string; status: string }) => {
+      console.log('🔄 Message status updated (legacy):', data.message_id, data.status);
+      this.onMessageStatusUpdate?.(data.message_id, data.status);
+    });
+
+    // ✅ NUEVO: Evento de actualización de conversación (chat updates)
+    this.socket.on('conversation_update', (data: any) => {
+      console.log('🔄 Conversation updated:', data.numero, 'Event type:', data.event_type);
+
+      // Transformar al formato Conversation si es necesario
+      const conversation: Partial<Conversation> = {
+        id: data.numero,
+        name: data.nombre,
+        phone: data.numero,
+        profile_pic_url: data.profile_picture,
+        last_message: data.last_message,
+        last_message_time: data.last_message_time || data.last_read_timestamp,
+      };
+
+      this.onConversationUpdate?.(conversation as Conversation);
+    });
+
+    // Legacy event (mantener por compatibilidad)
     this.socket.on('conversation_updated', (data: Conversation) => {
-      console.log('🔄 Conversation updated:', data.id);
+      console.log('🔄 Conversation updated (legacy):', data.id);
       this.onConversationUpdate?.(data);
     });
 
